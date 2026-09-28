@@ -63,7 +63,7 @@ export default async (request, context) => {
   }
 
   if (await validSession(context.cookies.get(COOKIE), secret)) {
-    return new URL("/index.html", request.url);
+    return context.next();
   }
 
   if (request.method === "POST") {

@@ -78,10 +78,10 @@ export default async (request, context) => {
       });
       return Response.redirect(new URL("/", request.url), 303);
     }
-    return loginPage(true);
+    return html(loginPage(true));
   }
 
-  return loginPage(false);
+  return html(loginPage(false));
   } catch (error) {
     console.error("[backoffice-auth] caught:", error?.stack || error?.message || String(error));
     return html("<h1>Backoffice temporarily unavailable</h1><p>The authentication service hit an error. Please try again shortly.</p>", 500);

@@ -62,10 +62,7 @@ export default async (request, context) => {
   }
 
   if (await validSession(context.cookies.get(COOKIE), secret)) {
-    // Returning undefined tells Netlify to continue to the static site.
-    // context.next() is unnecessary here and can yield a non-Response value
-    // depending on the request chain.
-    return;
+    return new URL("/index.html", request.url);
   }
 
   if (request.method === "POST") {

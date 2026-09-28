@@ -49,6 +49,7 @@ function loginPage(error = "") {
 }
 
 export default async (request, context) => {
+  try {
   const pin = Netlify.env.get("BACKOFFICE_PIN");
   const secret = Netlify.env.get("BACKOFFICE_SESSION_SECRET");
   if (!pin || !/^\d{6}$/.test(pin) || !secret) {
@@ -81,6 +82,10 @@ export default async (request, context) => {
   }
 
   return loginPage(false);
+  } catch (error) {
+    console.error("[backoffice-auth] caught:", error?.stack || error?.message || String(error));
+    return html("<h1>Backoffice temporarily unavailable</h1><p>The authentication service hit an error. Please try again shortly.</p>", 500);
+  }
 };
 
 export const config = { path: "/*" };

@@ -61,7 +61,12 @@ export default async (request, context) => {
     return Response.redirect(new URL("/", request.url), 302);
   }
 
-  if (await validSession(context.cookies.get(COOKIE), secret)) return context.next();
+  if (await validSession(context.cookies.get(COOKIE), secret)) {
+    // Returning undefined tells Netlify to continue to the static site.
+    // context.next() is unnecessary here and can yield a non-Response value
+    // depending on the request chain.
+    return;
+  }
 
   if (request.method === "POST") {
     const form = await request.formData();

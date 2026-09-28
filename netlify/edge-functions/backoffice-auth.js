@@ -63,7 +63,8 @@ export default async (request, context) => {
   }
 
   if (await validSession(context.cookies.get(COOKIE), secret)) {
-    return context.next();
+    const assetUrl = new URL(url.pathname === "/" ? "/index.html" : url.pathname, request.url);
+    return context.next(new Request(assetUrl, request));
   }
 
   if (request.method === "POST") {

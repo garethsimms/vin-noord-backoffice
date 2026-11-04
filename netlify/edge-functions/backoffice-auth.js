@@ -63,12 +63,10 @@ export default async (request, context) => {
   }
 
   if (await validSession(context.cookies.get(COOKIE), secret)) {
-    // Let Netlify serve ordinary static assets without constructing a new request.
-    // Explicitly rewrite the homepage to its physical file after authentication.
-    if (url.pathname === "/") {
-      return context.rewrite(new URL("/index.html", request.url));
-    }
-    return context.next();
+    // An authenticated request should continue to Netlify's normal static-file
+    // routing. Netlify resolves "/" to index.html and directory index files.
+    // Returning undefined avoids unsupported rewrite APIs and recursive routing.
+    return;
   }
 
   if (request.method === "POST") {

@@ -63,8 +63,12 @@ export default async (request, context) => {
   }
 
   if (await validSession(context.cookies.get(COOKIE), secret)) {
-    const assetUrl = new URL(url.pathname === "/" ? "/index.html" : url.pathname, request.url);
-    return context.next(new Request(assetUrl, request));
+    // Let Netlify serve ordinary static assets without constructing a new request.
+    // Explicitly rewrite the homepage to its physical file after authentication.
+    if (url.pathname === "/") {
+      return context.rewrite(new URL("/index.html", request.url));
+    }
+    return context.next();
   }
 
   if (request.method === "POST") {

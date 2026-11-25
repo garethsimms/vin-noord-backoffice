@@ -45,7 +45,7 @@ function loginPage(error = "") {
 <title>Vin Noord Backoffice</title><style>
 :root{--cream:#F4F1ED;--blue:#10359B;--coral:#F16748}*{box-sizing:border-box}body{margin:0;min-height:100vh;background:var(--cream);color:var(--blue);font-family:Arial,Helvetica,sans-serif;display:grid;place-items:center;padding:24px}.login{width:min(430px,100%)}.mark{font-size:2.4rem;font-weight:900;letter-spacing:-.06em;margin-bottom:48px}.eyebrow{font-size:.75rem;font-weight:800;letter-spacing:.16em;margin-bottom:12px}.login h1{font-size:2.4rem;line-height:1;margin:0 0 12px;letter-spacing:-.04em}.login p{margin:0 0 24px;line-height:1.5}.pin{width:100%;font:inherit;font-size:2rem;letter-spacing:.35em;text-align:center;color:var(--blue);background:#fff;border:2px solid var(--blue);border-radius:14px;padding:14px 10px;outline:none}.pin:focus{box-shadow:0 0 0 4px #84A5F3}.button{width:100%;margin-top:12px;border:0;border-radius:14px;padding:16px;background:var(--blue);color:#fff;font:inherit;font-weight:800;cursor:pointer}.error{color:#b42a14;font-weight:700;margin-bottom:14px!important}
 </style></head><body><main class="login"><div class="mark">VIN NOORD</div><div class="eyebrow">BACKOFFICE</div><h1>Enter PIN</h1><p>For Vin Noord staff.</p>${error ? '<p class="error">That PIN isn’t right. Try again.</p>' : ''}
-<form method="post"><input class="pin" name="pin" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" autofocus required aria-label="Six digit PIN"><button class="button" type="submit">Unlock</button></form></main></body></html>`;
+<form method="post" action="/__unlock"><input class="pin" name="pin" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" autofocus required aria-label="Six digit PIN"><button class="button" type="submit">Unlock</button></form></main></body></html>`;
 }
 
 export default async (request, context) => {
@@ -59,17 +59,10 @@ export default async (request, context) => {
   const url = new URL(request.url);
   if (url.pathname === "/__lock") {
     context.cookies.delete({ name: COOKIE, path: "/" });
-    return Response.redirect(new URL("/", request.url), 302);
+    return new Response(null, { status: 303, headers: { location: "/", "cache-control": "no-store", "Netlify-CDN-Cache-Control": "no-store" } });
   }
 
-  if (await validSession(context.cookies.get(COOKIE), secret)) {
-    // An authenticated request should continue to Netlify's normal static-file
-    // routing. Netlify resolves "/" to index.html and directory index files.
-    // Returning undefined avoids unsupported rewrite APIs and recursive routing.
-    return;
-  }
-
-  if (request.method === "POST") {
+  if (request.method === "POST" && (url.pathname === "/__unlock" || url.pathname === "/")) {
     const form = await request.formData();
     const submitted = String(form.get("pin") || "");
     if (submitted === pin) {
@@ -79,9 +72,22 @@ export default async (request, context) => {
         name: COOKIE, value: expires + "." + signature, path: "/",
         httpOnly: true, secure: true, sameSite: "Strict", maxAge: MAX_AGE
       });
-      return Response.redirect(new URL("/", request.url), 303);
+      return new Response(null, { status: 303, headers: { location: "/", "cache-control": "no-store", "Netlify-CDN-Cache-Control": "no-store" } });
     }
     return html(loginPage(true));
+  }
+
+  if (url.pathname === "/__unlock") {
+    return new Response(null, { status: 303, headers: { location: "/", "cache-control": "no-store" } });
+  }
+
+  if (await validSession(context.cookies.get(COOKIE), secret)) {
+    const response = await context.next();
+    const headers = new Headers(response.headers);
+    headers.set("cache-control", "private, no-store");
+    headers.set("Netlify-CDN-Cache-Control", "no-store");
+    headers.set("Vary", [...new Set([...(headers.get("Vary") || "").split(",").map(v => v.trim()).filter(Boolean), "Cookie"])].join(", "));
+    return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
   }
 
   return html(loginPage(false));
